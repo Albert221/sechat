@@ -15,7 +15,7 @@
         height: calc(100vh - 4.4rem - 3.5rem - 1rem);
         margin-right: 1rem;
         border-radius: 7px;
-        padding: 1rem 0 1rem 1rem;
+        padding: 1rem;
         background: #fff;
 
         @media (max-width: $mobileWidth) {
@@ -49,6 +49,7 @@
         flex: 1 auto;
         display: flex;
         flex-direction: column;
+        margin-right: -1rem;
         padding-right: 1rem;
         overflow-y: auto;
     }
