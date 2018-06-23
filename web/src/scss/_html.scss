@@ -1,0 +1,15 @@
+*, :before, :after {
+    box-sizing: inherit;
+}
+
+html {
+    box-sizing: border-box;
+    font-size: 18px;
+}
+
+body {
+    color: $textColor;
+    background: $bgColor;
+    line-height: 1.5;
+    font-family: 'Roboto Condensed', sans-serif;
+}

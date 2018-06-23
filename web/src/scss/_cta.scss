@@ -1,0 +1,47 @@
+.cta {
+    display: flex;
+    height: calc(100vh - 4.4rem - 3.5rem - 1rem);
+    overflow: hidden;
+
+    &--button-container {
+        position: relative;
+        margin: auto;
+
+        &::before, &::after {
+            content: "";
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            background: url('https://d30y9cdsu7xlg0.cloudfront.net/png/1563368-200.png') center/cover no-repeat;
+        }
+
+        &::before {
+            right: -90px;
+            top: -35px;
+            transform: rotate(-23deg);
+        }
+
+        &::after {
+            left: -94px;
+            top: -48px;
+            transform: rotate(29deg) scaleX(-1);
+        }
+    }
+
+    &--button {
+        position: relative;
+        top: 0;
+        border-radius: .5rem;
+        padding: 1rem 2rem;
+        color: #fff;
+        background: $primaryAccent;
+        text-decoration: none;
+        box-shadow: 0 5px 0 darken($primaryAccent, 10%);
+        transition: .1s linear;
+
+        &:active {
+            top: 3px;
+            box-shadow: 0 2px 0 darken($primaryAccent, 10%);
+        }
+    }
+}

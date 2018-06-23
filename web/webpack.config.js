@@ -8,11 +8,19 @@ module.exports = {
                 test: /\.(js|jsx)$/,
                 exclude: /node_modules/,
                 use: ['babel-loader']
+            },
+            {
+                test: /\.scss$/,
+                use: [
+                    'style-loader',
+                    'css-loader',
+                    'sass-loader'
+                ]
             }
         ]
     },
     resolve: {
-        extensions: ['*', '.js', '.jsx']
+        extensions: ['*', '.js', '.jsx', '.scss']
     },
     output: {
         path: __dirname + '/dist',
@@ -22,4 +30,4 @@ module.exports = {
     devServer: {
         contentBase: './dist'
     }
-};
+}
