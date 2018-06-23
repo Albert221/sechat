@@ -1,0 +1,30 @@
+.footer {
+    padding: 1rem;
+    font-size: .9rem;
+    text-align: center;
+
+    @media (min-width: #{$mobileWidth + .01rem}) {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+    }
+
+    &--copyright {
+        //
+
+        &::after, &::before {
+            content: "•";
+            margin: 1rem;
+        }
+    }
+
+    &--link {
+        color: $textOnPrimary;
+        transition: .1s;
+
+        &:hover, &:focus {
+            color: darken($textOnPrimary, 10%);
+        }
+    }
+}
