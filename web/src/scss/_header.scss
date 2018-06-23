@@ -6,12 +6,19 @@
 
     &--logo {
         margin: 0;
-        padding: .7rem 2rem;
+        padding: .7rem 1rem .7rem 0;
+        line-height: 0;
     }
 
     &--logo-link {
-        text-decoration: none;
+        display: inline-block;
+        width: 145px;
+        height: 43px;
         color: $textOnPrimaryActive;
+        background: url('logo.svg') center/contain no-repeat;
+        text-indent: -100%;
+        text-decoration: none;
+        overflow: hidden;
     }
 
     &--slogan {
