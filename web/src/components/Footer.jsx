@@ -1,8 +1,9 @@
 import React from 'react'
+import { Link } from '@reach/router'
 
 export default () => (
     <footer className="footer">
-        <a href="#" className="footer--link">Privacy</a>
+        <Link to="privacy" className="footer--link">Privacy</Link>
         <span className="footer--copyright">© Sechat, 2018.</span>
         <a href="https://github.com/Albert221/sechat" className="footer--link">Source</a>
     </footer>

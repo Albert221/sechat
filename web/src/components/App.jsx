@@ -1,19 +1,21 @@
 import React from 'react'
 import { Router } from '@reach/router'
 import Header from './Header'
-import Home from './Home'
-import Chat from './Chat'
+import HomePage from './HomePage'
+import ChatPage from './ChatPage'
 import Footer from './Footer'
 
 import '../scss/style.scss'
+import PrivacyPage from './PrivacyPage';
 
 export default () => (
     <div>
         <Header/>
         <main className="main">
             <Router>
-                <Home path="/"/>
-                <Chat path="chat"/>
+                <HomePage path="/"/>
+                <ChatPage path="chat"/>
+                <PrivacyPage path="privacy"/>
             </Router>
         </main>
         <Footer/>

@@ -1,0 +1,10 @@
+.content {
+    @extend .container;
+    border-radius: 7px;
+    padding: 1rem;
+    background: #fff;
+
+    &--title {
+        margin-top: 0;
+    }
+}
