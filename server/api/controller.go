@@ -121,6 +121,8 @@ func (c *Controller) handleWebsocket(room *models.ChatRoom, client *models.Clien
 
 		switch message.Type {
 		case TypeMessage:
+			// TODO: Create and persist Message to ChatRoom
+
 			room.Broadcast(message)
 		}
 	}
