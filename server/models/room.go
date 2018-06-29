@@ -6,7 +6,7 @@ import (
 	"bytes"
 )
 
-type ChatRoom struct {
+type Room struct {
 	Id          string
 	CreatedAt   int64
 	Clients     [2]Client
@@ -14,22 +14,22 @@ type ChatRoom struct {
 	Messages    []*Message
 }
 
-func NewChatRoom() ChatRoom {
-	return ChatRoom{
+func NewChatRoom() Room {
+	return Room{
 		Id:        utils.RandomString(8),
 		CreatedAt: time.Now().Unix(),
 	}
 }
 
-func (cr *ChatRoom) SetFirstClient(client Client) {
+func (cr *Room) SetFirstClient(client Client) {
 	cr.Clients[0] = client
 }
 
-func (cr *ChatRoom) SecondClientExists() bool {
+func (cr *Room) SecondClientExists() bool {
 	return len(cr.Clients[1].EncryptedPublicKey) > 0
 }
 
-func (cr *ChatRoom) SetSecondClient(client Client) {
+func (cr *Room) SetSecondClient(client Client) {
 	cr.Clients[1] = client
 
 	// Send twice, for both clients
@@ -39,7 +39,7 @@ func (cr *ChatRoom) SetSecondClient(client Client) {
 
 // GetClientByPublicKey returns pointer to the client corresponding
 // to the given encrypted public key or nil when given does not exist.
-func (cr *ChatRoom) GetClientByPublicKey(pubKey []byte) *Client {
+func (cr *Room) GetClientByPublicKey(pubKey []byte) *Client {
 	for _, client := range cr.Clients {
 		if bytes.Equal(client.EncryptedPublicKey, pubKey) {
 			return &client
@@ -50,7 +50,7 @@ func (cr *ChatRoom) GetClientByPublicKey(pubKey []byte) *Client {
 }
 
 // GetNeighborClient returns the other client than the one specified.
-func (cr *ChatRoom) GetNeighborClient(client *Client) *Client {
+func (cr *Room) GetNeighborClient(client *Client) *Client {
 	if bytes.Equal(client.EncryptedPublicKey, cr.Clients[0].EncryptedPublicKey) {
 		return &cr.Clients[1]
 	} else {
@@ -58,10 +58,8 @@ func (cr *ChatRoom) GetNeighborClient(client *Client) *Client {
 	}
 }
 
-func (cr *ChatRoom) Broadcast(v interface{}) {
+func (cr *Room) SendUpdate(update Update) {
 	for _, client := range cr.Clients {
-		if client.IsSessionOpened() {
-			client.Session.Websocket.WriteJSON(v)
-		}
+		client.SendUpdate(update)
 	}
 }

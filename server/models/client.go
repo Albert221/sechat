@@ -1,43 +1,27 @@
 package models
 
-import (
-	ws "github.com/gorilla/websocket"
-)
-
 type Client struct {
 	EncryptedPublicKey []byte
 	Session            ClientSession
+	room               *Room
 }
 
-type ClientSession struct {
-	open           bool
-	Websocket      *ws.Conn
-}
-
-func NewClient(pubKey []byte) Client {
+func (cr *Room) NewClient(pubKey []byte) Client {
 	return Client{
 		EncryptedPublicKey: pubKey,
+		room:               cr,
 	}
 }
 
-func (c *Client) IsSessionOpened() bool {
-	return c.Session.open
+func (c *Client) SendMessage(messageContent []byte) {
+	message := NewMessage(messageContent, c)
+
+	c.room.Messages = append(c.room.Messages, &message)
+	c.room.SendUpdate(&message)
 }
 
-func (c *Client) OpenSession(websocket *ws.Conn) {
-	c.Session = ClientSession{
-		open:           true,
-		Websocket:      websocket,
+func (c *Client) SendUpdate(update Update) {
+	if c.IsSessionOpened() {
+		c.Session.Websocket.WriteJSON(update.UpdateStruct())
 	}
-
-	websocket.SetCloseHandler(func(code int, text string) error {
-		c.CloseSession()
-		return nil
-	})
-}
-
-func (c *Client) CloseSession() {
-	// FIXME: or deleteme, not sure if this won't create infinite loop
-	c.Session.Websocket.Close()
-	c.Session = ClientSession{}
 }

@@ -10,8 +10,8 @@ var (
 )
 
 type ChatRepository interface {
-	Get(id string) (*models.ChatRoom, error)
+	Get(id string) (*models.Room, error)
 	Exists(id string) bool
-	Persist(room *models.ChatRoom) error
-	Remove(room *models.ChatRoom) error
+	Persist(room *models.Room) error
+	Remove(room *models.Room) error
 }

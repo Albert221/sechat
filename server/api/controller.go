@@ -8,27 +8,12 @@ import (
 	"github.com/gorilla/mux"
 	"log"
 	"encoding/base64"
+	"github.com/oliveagle/jsonpath"
 )
 
 type Controller struct {
 	upgrader   ws.Upgrader
 	repository ChatRepository
-}
-
-const (
-	// inner
-
-	// outer
-	TypeOtherClientPublicKey = "other_client_public_key"
-
-	// both
-	TypeMessage = "message"
-)
-
-type websocketMessage struct {
-	Type    string `json:"type"`
-	Sender  string `json:"sender,omitempty"`
-	Payload string `json:"payload"`
 }
 
 func NewController() Controller {
@@ -43,7 +28,7 @@ func NewController() Controller {
 func (c *Controller) NewEndpoint(w http.ResponseWriter, r *http.Request) {
 	encryptedPubKey, _ := ioutil.ReadAll(r.Body)
 
-	var room models.ChatRoom
+	var room models.Room
 	for {
 		room = models.NewChatRoom()
 
@@ -53,7 +38,7 @@ func (c *Controller) NewEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	room.SetFirstClient(
-		models.NewClient(encryptedPubKey))
+		room.NewClient(encryptedPubKey))
 
 	c.repository.Persist(&room)
 
@@ -79,7 +64,7 @@ func (c *Controller) ChatEndpoint(w http.ResponseWriter, r *http.Request) {
 		} else {
 			// There is no second client yet
 			room.SetSecondClient(
-				models.NewClient(encryptedPubKey))
+				room.NewClient(encryptedPubKey))
 			client = &room.Clients[1]
 
 			c.repository.Persist(room)
@@ -102,7 +87,7 @@ func (c *Controller) ChatEndpoint(w http.ResponseWriter, r *http.Request) {
 	c.handleWebsocket(room, client)
 }
 
-func (c *Controller) handleWebsocket(room *models.ChatRoom, client *models.Client) {
+func (c *Controller) handleWebsocket(room *models.Room, client *models.Client) {
 	// Wait for both clients to connect
 	// ================================
 	<-room.BothConnect
@@ -111,30 +96,35 @@ func (c *Controller) handleWebsocket(room *models.ChatRoom, client *models.Clien
 
 	// Send neighbour public key
 	// ====================
-	c.sendPublicKeyOfSourceTo(neighbor, client)
+	otherPublicKeyUpdate := models.NewOtherPublicKeyUpdate(
+		neighbor.EncryptedPublicKey)
+	client.SendUpdate(&otherPublicKeyUpdate)
 
 	// Listen for sent messages
 	// ========================
 	for {
-		var message websocketMessage
-		client.Session.Websocket.ReadJSON(&message)
+		var request interface{}
+		client.Session.Websocket.ReadJSON(&request)
 
-		switch message.Type {
-		case TypeMessage:
-			// TODO: Create and persist Message to ChatRoom
+		requestType, err := jsonpath.JsonPathLookup(request, "$.type")
+		if err != nil {
+			continue
+		}
 
-			room.Broadcast(message)
+		switch requestType.(string) {
+		case models.TypeMessage:
+			messageEncoded, err := jsonpath.JsonPathLookup(requestType, "$.payload")
+			if err != nil {
+				continue
+			}
+
+			message, err := base64.StdEncoding.DecodeString(messageEncoded.(string))
+			if err != nil {
+				continue
+			}
+			client.SendMessage(message)
+
+			c.repository.Persist(room)
 		}
 	}
-}
-
-func (c *Controller) sendPublicKeyOfSourceTo(source, receiver *models.Client) {
-	base64Payload := base64.StdEncoding.EncodeToString(source.EncryptedPublicKey)
-
-	message := &websocketMessage{
-		Type:    TypeOtherClientPublicKey,
-		Payload: base64Payload,
-	}
-
-	receiver.Session.Websocket.WriteJSON(message)
 }

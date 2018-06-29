@@ -12,6 +12,8 @@ import (
 func main() {
 	controller := api.NewController()
 
+	// TODO: Run goroutine to remove rooms older than 24hr
+
 	r := mux.NewRouter()
 	r.HandleFunc("/new", controller.NewEndpoint).Methods("POST")
 	r.HandleFunc("/{id}", controller.ChatEndpoint).Methods("POST")

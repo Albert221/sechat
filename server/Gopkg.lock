@@ -19,9 +19,15 @@
   revision = "ea4d1f681babbce9545c9c5f3d5194a789c89f5b"
   version = "v1.2.0"
 
+[[projects]]
+  branch = "master"
+  name = "github.com/oliveagle/jsonpath"
+  packages = ["."]
+  revision = "2e52cf6e685269ed8aefec6390f3cac3ef74e730"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "98257bfbc8c4389783a5cc33345384ecc64f5db4fc4cf3eeb72eaef9f1cf4e06"
+  inputs-digest = "7e2d386287f53e8214cfa57933d1f513dd56b68ebbfb987c0bff69d0da5807f2"
   solver-name = "gps-cdcl"
   solver-version = 1
