@@ -9,6 +9,7 @@ import (
 	"log"
 	"encoding/base64"
 	"github.com/oliveagle/jsonpath"
+	"strings"
 )
 
 type Controller struct {
@@ -16,12 +17,13 @@ type Controller struct {
 	repository ChatRepository
 }
 
-func NewController() Controller {
+func NewController(repository ChatRepository) Controller {
 	return Controller{
 		upgrader: ws.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
 		},
+		repository: repository,
 	}
 }
 
@@ -47,7 +49,14 @@ func (c *Controller) NewEndpoint(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) ChatEndpoint(w http.ResponseWriter, r *http.Request) {
 	roomId := mux.Vars(r)["id"]
-	encryptedPubKey, _ := ioutil.ReadAll(r.Body)
+	authHeader := r.Header.Get("Authorization")
+	splitedAuthHeader := strings.Split(authHeader, " ")
+	if len(splitedAuthHeader) != 2 {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	encryptedPubKey := []byte(splitedAuthHeader[1])
 
 	room, err := c.repository.Get(roomId)
 	if err == RoomNotFoundError {
@@ -67,7 +76,7 @@ func (c *Controller) ChatEndpoint(w http.ResponseWriter, r *http.Request) {
 				room.NewClient(encryptedPubKey))
 			client = &room.Clients[1]
 
-			c.repository.Persist(room)
+			c.repository.Persist(&room)
 		}
 	}
 
@@ -84,7 +93,7 @@ func (c *Controller) ChatEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	client.OpenSession(conn)
-	c.handleWebsocket(room, client)
+	c.handleWebsocket(&room, client)
 }
 
 func (c *Controller) handleWebsocket(room *models.Room, client *models.Client) {

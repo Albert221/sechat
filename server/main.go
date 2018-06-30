@@ -10,13 +10,16 @@ import (
 )
 
 func main() {
-	controller := api.NewController()
+	repository := api.NewInMemoryChatRepository()
+	controller := api.NewController(
+		&repository)
 
 	// TODO: Run goroutine to remove rooms older than 24hr
 
 	r := mux.NewRouter()
 	r.HandleFunc("/new", controller.NewEndpoint).Methods("POST")
-	r.HandleFunc("/{id}", controller.ChatEndpoint).Methods("POST")
+	// Put public key in Authorization header, like this: `Authorization: Key <public key>`
+	r.HandleFunc("/{id}", controller.ChatEndpoint).Methods("GET")
 
 	srv := &http.Server{
 		Handler:      r,
