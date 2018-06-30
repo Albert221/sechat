@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	RoomNotFoundError = errors.New("chatroom has not been found"),
+	RoomNotFoundError = errors.New("chatroom has not been found")
 )
 
 type ChatRepository interface {

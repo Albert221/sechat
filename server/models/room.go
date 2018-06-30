@@ -10,14 +10,15 @@ type Room struct {
 	Id          string
 	CreatedAt   int64
 	Clients     [2]Client
-	BothConnect <-chan bool
+	BothConnect chan bool
 	Messages    []*Message
 }
 
 func NewChatRoom() Room {
 	return Room{
-		Id:        utils.RandomString(8),
-		CreatedAt: time.Now().Unix(),
+		Id:          utils.RandomString(8),
+		CreatedAt:   time.Now().Unix(),
+		BothConnect: make(chan bool),
 	}
 }
 
