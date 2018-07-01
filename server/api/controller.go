@@ -4,12 +4,11 @@ import (
 	ws "github.com/gorilla/websocket"
 	"net/http"
 	"github.com/Albert221/sechat/server/models"
+	"github.com/Albert221/sechat/server/api/updates"
 	"io/ioutil"
 	"github.com/gorilla/mux"
 	"log"
 	"encoding/base64"
-	"github.com/oliveagle/jsonpath"
-	"strings"
 )
 
 type Controller struct {
@@ -22,6 +21,10 @@ func NewController(repository ChatRepository) Controller {
 		upgrader: ws.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
+			// FIXME: ONLY FOR DEBUG!
+			CheckOrigin: func(r *http.Request) bool {
+				return true
+			},
 		},
 		repository: repository,
 	}
@@ -49,40 +52,10 @@ func (c *Controller) NewEndpoint(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) ChatEndpoint(w http.ResponseWriter, r *http.Request) {
 	roomId := mux.Vars(r)["id"]
-	authHeader := r.Header.Get("Authorization")
-	splitedAuthHeader := strings.Split(authHeader, " ")
-	if len(splitedAuthHeader) != 2 {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	encryptedPubKey := []byte(splitedAuthHeader[1])
 
 	room, err := c.repository.Get(roomId)
 	if err == RoomNotFoundError {
 		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	var client *models.Client
-	if client = room.GetClientByPublicKey(encryptedPubKey); client == nil {
-		if room.SecondClientExists() {
-			// There are both clients existing, but pub key doesn't match any
-			w.WriteHeader(http.StatusForbidden)
-			return
-		} else {
-			// There is no second client yet
-			room.SetSecondClient(
-				room.NewClient(encryptedPubKey))
-			client = &room.Clients[1]
-
-			c.repository.Persist(&room)
-		}
-	}
-
-	// Return 429 when session is already opened
-	if client.IsSessionOpened() {
-		w.WriteHeader(http.StatusTooManyRequests)
 		return
 	}
 
@@ -92,42 +65,103 @@ func (c *Controller) ChatEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client.OpenSession(conn)
-	c.handleWebsocket(&room, client)
+	c.handleWebsocket(&room, conn)
 }
 
-func (c *Controller) handleWebsocket(room *models.Room, client *models.Client) {
+func (c *Controller) handleWebsocket(room *models.Room, conn *ws.Conn) {
+	// Wait for the client's public key
+	// ================================
+	var client *models.Client
+	for {
+		var update interface{}
+		conn.ReadJSON(&update)
+
+		log.Println(update)
+
+		updateType, payload, err := updates.ParseUpdate(update)
+		if err != nil || updateType != updates.TypeMyPublicKey {
+			continue
+		}
+
+		publicKey, err := base64.StdEncoding.DecodeString(payload.(string))
+		if err != nil {
+			continue
+		}
+
+		if client = room.GetClientByPublicKey(publicKey); client == nil {
+			if room.SecondClientExists() {
+				// There are both clients existing, but pub key doesn't match any
+				conn.WriteJSON(
+					updates.NewErrorUpdate(1, "forbidden").UpdateStruct())
+				conn.Close()
+				return
+			} else {
+				// There is no second client yet
+				room.SetSecondClient(
+					room.NewClient(publicKey))
+				client = &room.Clients[1]
+
+				c.repository.Persist(room)
+			}
+		}
+
+		break
+	}
+
+	// Check if session doesn't already exist and open it if it doesn't
+	// =======
+	if client.IsSessionOpened() {
+		conn.WriteJSON(
+			updates.NewErrorUpdate(2, "session already opened"))
+		conn.Close()
+		return
+	} else {
+		client.OpenSession(conn)
+	}
+
 	// Wait for both clients to connect
 	// ================================
-	<-room.BothConnect
+	if !room.BothConnected {
+		<-room.BothConnectChan
+
+		// Refresh room instance, it now has the neighbor pubkey
+		newRoom, err := c.repository.Get(room.Id)
+		if err != nil {
+			client.CloseSession()
+			return
+		}
+		// FIXME: Client somehow loses its session somewhere there, session
+		// FIXME: should not be attached to the client *obvious*.
+		// FIXME: That's why clients don't receive updates, their session.open = false!
+		room = &newRoom
+	}
 
 	neighbor := room.GetNeighborClient(client)
 
 	// Send neighbour public key
 	// ====================
-	otherPublicKeyUpdate := models.NewOtherPublicKeyUpdate(
+	otherPublicKeyUpdate := updates.NewOtherPublicKeyUpdate(
 		neighbor.EncryptedPublicKey)
 	client.SendUpdate(&otherPublicKeyUpdate)
 
-	// Listen for sent messages
+	// Listen for sent updates
 	// ========================
 	for {
-		var request interface{}
-		client.Session.Websocket.ReadJSON(&request)
+		var update interface{}
+		err := conn.ReadJSON(&update)
+		if r := recover(); r != nil {
+			client.CloseSession()
+			return
+		}
 
-		requestType, err := jsonpath.JsonPathLookup(request, "$.type")
+		updateType, payload, err := updates.ParseUpdate(update)
 		if err != nil {
 			continue
 		}
 
-		switch requestType.(string) {
-		case models.TypeMessage:
-			messageEncoded, err := jsonpath.JsonPathLookup(requestType, "$.payload")
-			if err != nil {
-				continue
-			}
-
-			message, err := base64.StdEncoding.DecodeString(messageEncoded.(string))
+		switch updateType {
+		case updates.TypeMessage:
+			message, err := base64.StdEncoding.DecodeString(payload.(string))
 			if err != nil {
 				continue
 			}

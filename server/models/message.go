@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 	"encoding/base64"
+	"github.com/Albert221/sechat/server/api/updates"
 )
 
 type Message struct {
@@ -23,7 +24,7 @@ func NewMessage(content []byte, author *Client) Message {
 
 func (m *Message) UpdateStruct() map[string]interface{} {
 	return map[string]interface{}{
-		"type":    TypeMessage,
+		"type":    updates.TypeMessage,
 		"payload": m,
 	}
 }

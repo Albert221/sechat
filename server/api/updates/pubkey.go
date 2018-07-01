@@ -1,18 +1,20 @@
-package models
+package updates
+
+import "encoding/base64"
 
 type OtherPublicKeyUpdate struct {
-	PublicKeyUpdate []byte `json:"otherClientPublicKey"`
+	publicKeyUpdate []byte
 }
 
 func NewOtherPublicKeyUpdate(publicKey []byte) OtherPublicKeyUpdate {
 	return OtherPublicKeyUpdate{
-		PublicKeyUpdate: publicKey,
+		publicKeyUpdate: publicKey,
 	}
 }
 
 func (p *OtherPublicKeyUpdate) UpdateStruct() map[string]interface{} {
 	return map[string]interface{}{
 		"type":    TypeOtherPublicKey,
-		"payload": p,
+		"payload": base64.StdEncoding.EncodeToString(p.publicKeyUpdate),
 	}
 }

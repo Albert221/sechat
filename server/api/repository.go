@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/Albert221/sechat/server/models"
 	"errors"
+	"log"
 )
 
 var (
@@ -45,6 +46,9 @@ func (r *InMemoryChatRepository) Exists(id string) bool {
 }
 
 func (r *InMemoryChatRepository) Persist(room *models.Room) error {
+	// FIXME: debug
+	log.Println("saving")
+
 	for i, iRoom := range r.rooms {
 		if iRoom.Id == room.Id {
 			r.rooms[i] = *room

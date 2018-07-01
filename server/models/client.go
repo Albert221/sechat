@@ -1,5 +1,10 @@
 package models
 
+import (
+	"github.com/Albert221/sechat/server/api/updates"
+	"log"
+)
+
 type Client struct {
 	EncryptedPublicKey []byte
 	Session            ClientSession
@@ -20,8 +25,9 @@ func (c *Client) SendMessage(messageContent []byte) {
 	c.room.SendUpdate(&message)
 }
 
-func (c *Client) SendUpdate(update Update) {
+func (c *Client) SendUpdate(update updates.Update) {
 	if c.IsSessionOpened() {
+		log.Println("sending update lol")
 		c.Session.Websocket.WriteJSON(update.UpdateStruct())
 	}
 }

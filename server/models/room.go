@@ -4,21 +4,23 @@ import (
 	"github.com/Albert221/sechat/server/utils"
 	"time"
 	"bytes"
+	"github.com/Albert221/sechat/server/api/updates"
 )
 
 type Room struct {
-	Id          string
-	CreatedAt   int64
-	Clients     [2]Client
-	BothConnect chan bool
-	Messages    []*Message
+	Id              string
+	CreatedAt       int64
+	Clients         [2]Client
+	BothConnectChan chan bool
+	BothConnected   bool
+	Messages        []*Message
 }
 
 func NewChatRoom() Room {
 	return Room{
-		Id:          utils.RandomString(8),
-		CreatedAt:   time.Now().Unix(),
-		BothConnect: make(chan bool),
+		Id:              utils.RandomString(8),
+		CreatedAt:       time.Now().Unix(),
+		BothConnectChan: make(chan bool),
 	}
 }
 
@@ -33,9 +35,8 @@ func (cr *Room) SecondClientExists() bool {
 func (cr *Room) SetSecondClient(client Client) {
 	cr.Clients[1] = client
 
-	// Send twice, for both clients
-	cr.BothConnect <- true
-	cr.BothConnect <- true
+	cr.BothConnectChan <- true
+	cr.BothConnected = true
 }
 
 // GetClientByPublicKey returns pointer to the client corresponding
@@ -59,7 +60,7 @@ func (cr *Room) GetNeighborClient(client *Client) *Client {
 	}
 }
 
-func (cr *Room) SendUpdate(update Update) {
+func (cr *Room) SendUpdate(update updates.Update) {
 	for _, client := range cr.Clients {
 		client.SendUpdate(update)
 	}
