@@ -12,8 +12,8 @@ import (
 )
 
 type Controller struct {
-	upgrader   ws.Upgrader
-	repository ChatRepository
+	upgrader    ws.Upgrader
+	repository  ChatRepository
 }
 
 func NewController(repository ChatRepository) Controller {
@@ -26,7 +26,7 @@ func NewController(repository ChatRepository) Controller {
 				return true
 			},
 		},
-		repository: repository,
+		repository:   repository,
 	}
 }
 
@@ -42,8 +42,8 @@ func (c *Controller) NewEndpoint(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	room.SetFirstClient(
-		room.NewClient(encryptedPubKey))
+	firstClient := room.NewClient(encryptedPubKey)
+	room.SetFirstClient(&firstClient)
 
 	c.repository.Persist(&room)
 
@@ -72,6 +72,7 @@ func (c *Controller) handleWebsocket(room *models.Room, conn *ws.Conn) {
 	// Wait for the client's public key
 	// ================================
 	var client *models.Client
+	var publicKey []byte
 	for {
 		var update interface{}
 		conn.ReadJSON(&update)
@@ -83,7 +84,7 @@ func (c *Controller) handleWebsocket(room *models.Room, conn *ws.Conn) {
 			continue
 		}
 
-		publicKey, err := base64.StdEncoding.DecodeString(payload.(string))
+		publicKey, err = base64.StdEncoding.DecodeString(payload.(string))
 		if err != nil {
 			continue
 		}
@@ -97,9 +98,9 @@ func (c *Controller) handleWebsocket(room *models.Room, conn *ws.Conn) {
 				return
 			} else {
 				// There is no second client yet
-				room.SetSecondClient(
-					room.NewClient(publicKey))
-				client = &room.Clients[1]
+				secondClient := room.NewClient(publicKey)
+				room.SetSecondClient(&secondClient)
+				client = &secondClient
 
 				c.repository.Persist(room)
 			}
@@ -110,13 +111,13 @@ func (c *Controller) handleWebsocket(room *models.Room, conn *ws.Conn) {
 
 	// Check if session doesn't already exist and open it if it doesn't
 	// =======
-	if client.IsSessionOpened() {
+	if client.Socket != nil {
 		conn.WriteJSON(
 			updates.NewErrorUpdate(2, "session already opened"))
 		conn.Close()
 		return
 	} else {
-		client.OpenSession(conn)
+		client.Socket = conn
 	}
 
 	// Wait for both clients to connect
@@ -127,13 +128,12 @@ func (c *Controller) handleWebsocket(room *models.Room, conn *ws.Conn) {
 		// Refresh room instance, it now has the neighbor pubkey
 		newRoom, err := c.repository.Get(room.Id)
 		if err != nil {
-			client.CloseSession()
 			return
 		}
-		// FIXME: Client somehow loses its session somewhere there, session
-		// FIXME: should not be attached to the client *obvious*.
-		// FIXME: That's why clients don't receive updates, their session.open = false!
+
 		room = &newRoom
+		client = room.GetClientByPublicKey(publicKey)
+		client.Socket = conn
 	}
 
 	neighbor := room.GetNeighborClient(client)
@@ -149,8 +149,7 @@ func (c *Controller) handleWebsocket(room *models.Room, conn *ws.Conn) {
 	for {
 		var update interface{}
 		err := conn.ReadJSON(&update)
-		if r := recover(); r != nil {
-			client.CloseSession()
+		if err != nil {
 			return
 		}
 

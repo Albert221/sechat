@@ -10,7 +10,7 @@ import (
 type Room struct {
 	Id              string
 	CreatedAt       int64
-	Clients         [2]Client
+	Clients         [2]*Client
 	BothConnectChan chan bool
 	BothConnected   bool
 	Messages        []*Message
@@ -24,15 +24,15 @@ func NewChatRoom() Room {
 	}
 }
 
-func (cr *Room) SetFirstClient(client Client) {
+func (cr *Room) SetFirstClient(client *Client) {
 	cr.Clients[0] = client
 }
 
 func (cr *Room) SecondClientExists() bool {
-	return len(cr.Clients[1].EncryptedPublicKey) > 0
+	return cr.Clients[1] != nil
 }
 
-func (cr *Room) SetSecondClient(client Client) {
+func (cr *Room) SetSecondClient(client *Client) {
 	cr.Clients[1] = client
 
 	cr.BothConnectChan <- true
@@ -43,8 +43,8 @@ func (cr *Room) SetSecondClient(client Client) {
 // to the given encrypted public key or nil when given does not exist.
 func (cr *Room) GetClientByPublicKey(pubKey []byte) *Client {
 	for _, client := range cr.Clients {
-		if bytes.Equal(client.EncryptedPublicKey, pubKey) {
-			return &client
+		if client != nil && bytes.Equal(client.EncryptedPublicKey, pubKey) {
+			return client
 		}
 	}
 
@@ -54,9 +54,9 @@ func (cr *Room) GetClientByPublicKey(pubKey []byte) *Client {
 // GetNeighborClient returns the other client than the one specified.
 func (cr *Room) GetNeighborClient(client *Client) *Client {
 	if bytes.Equal(client.EncryptedPublicKey, cr.Clients[0].EncryptedPublicKey) {
-		return &cr.Clients[1]
+		return cr.Clients[1]
 	} else {
-		return &cr.Clients[0]
+		return cr.Clients[0]
 	}
 }
 
