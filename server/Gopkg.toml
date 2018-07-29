@@ -38,5 +38,5 @@
   unused-packages = true
 
 [[constraint]]
-  branch = "master"
-  name = "github.com/oliveagle/jsonpath"
+  name = "github.com/google/uuid"
+  version = "0.2.0"
